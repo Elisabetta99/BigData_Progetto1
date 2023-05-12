@@ -8,4 +8,4 @@
 
 Ciascun Job è stato progettato e realizzato in *MapReduce*, *Hive*, *Spark*.
 
-Dataset utilizzato: (Amazon Fine Food Reviews)[https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews]
+Dataset utilizzato: [Amazon Fine Food Reviews](https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews)
