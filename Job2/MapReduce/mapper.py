@@ -15,6 +15,8 @@ for line in sys.stdin:
         if helpfulness_den != 0:
             usefulness = helpfulness_num / helpfulness_den
             print('%s \t%s' % (user_id, usefulness))
+        else:
+            print('%s \t%s' % (user_id, 0))
 
     except(ValueError, IndexError):
         pass
