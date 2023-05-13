@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""spark application"""
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when, sum, count
 
@@ -13,7 +16,7 @@ user_appreciation_df = reviews_df.groupBy("UserId") \
     .agg((sum(utility) / count("*")).alias("Appreciation"))
 
 # Ordinamento della lista di utenti in base all'apprezzamento
-sorted_users = user_appreciation_df.orderBy("Appreciation", ascending=False)
+sorted_users = user_appreciation_df.orderBy(["Appreciation", "UserId"], ascending=[False, False])
 
 # Visualizzazione dei risultati
 sorted_users.show()
