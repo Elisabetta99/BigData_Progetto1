@@ -43,15 +43,17 @@ sortedUsersRDD = userAppreciationRDD.sortBy(lambda x: x[1], ascending=False)
 
 # Misurazione del tempo di esecuzione e stampa dei risultati
 start_time = time.time()
-sortedUsersRDD.collect()
-end_time = time.time()
-print("Total execution time: {} seconds".format(end_time - start_time))
-print("End")
 
 # Stampa dei risultati nel terminale
 sorted_users = sortedUsersRDD.collect()
 for user in sorted_users:
     print(user)
 
+# Calcola il tempo di esecuzione
+end_time = time.time()
+print("Total execution time: {} seconds".format(end_time - start_time))
+print("End")
+
 # Salvataggio dei risultati in un file di output
 sortedUsersRDD.saveAsTextFile(output_filepath)
+

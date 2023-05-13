@@ -1,0 +1,71 @@
+Logging initialized using configuration in jar:file:/home/elisabetta/Documenti/apache-hive-2.3.9-bin/lib/hive-common-2.3.9.jar!/hive-log4j2.properties Async: true
+OK
+Time taken: 12.431 seconds
+OK
+Time taken: 1.397 seconds
+Loading data to table default.user_reviews
+OK
+Time taken: 7.318 seconds
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = elisabetta_20230513224600_9c71dd30-9e5b-495c-bf8f-440c1069d8f1
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks not specified. Estimated from input data size: 2
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Job running in-process (local Hadoop)
+2023-05-13 22:46:08,052 Stage-1 map = 0%,  reduce = 0%
+2023-05-13 22:46:15,336 Stage-1 map = 100%,  reduce = 0%
+2023-05-13 22:46:20,487 Stage-1 map = 100%,  reduce = 50%
+2023-05-13 22:46:22,562 Stage-1 map = 100%,  reduce = 100%
+Ended Job = job_local1499768017_0001
+Moving data to directory hdfs://localhost:9000/user/hive/warehouse/user_appreciation
+MapReduce Jobs Launched: 
+Stage-Stage-1:  HDFS Read: 1171182306 HDFS Write: 1211552039 SUCCESS
+Total MapReduce CPU Time Spent: 0 msec
+OK
+Time taken: 22.876 seconds
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = elisabetta_20230513224623_3ed1b53b-ff85-41d4-b778-0fe91b83d588
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks determined at compile time: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Job running in-process (local Hadoop)
+2023-05-13 22:46:25,952 Stage-1 map = 0%,  reduce = 0%
+2023-05-13 22:46:28,980 Stage-1 map = 100%,  reduce = 0%
+2023-05-13 22:46:36,069 Stage-1 map = 100%,  reduce = 100%
+Ended Job = job_local1466453019_0002
+Moving data to directory hdfs://localhost:9000/user/hive/warehouse/sorted_users
+MapReduce Jobs Launched: 
+Stage-Stage-1:  HDFS Read: 612402374 HDFS Write: 617674196 SUCCESS
+Total MapReduce CPU Time Spent: 0 msec
+OK
+Time taken: 13.386 seconds
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = elisabetta_20230513224636_0f794f19-e0e6-4eba-8624-9e5c6b766ba2
+Total jobs = 3
+Launching Job 1 out of 3
+Number of reduce tasks is set to 0 since there's no reduce operator
+Job running in-process (local Hadoop)
+2023-05-13 22:46:39,150 Stage-1 map = 100%,  reduce = 0%
+Ended Job = job_local795278294_0003
+Stage-3 is selected by condition resolver.
+Stage-2 is filtered out by condition resolver.
+Stage-4 is filtered out by condition resolver.
+Moving data to directory hdfs://localhost:9000/user/elisabetta/home/elisabetta/Scrivania/BigData/.hive-staging_hive_2023-05-13_22-46-37_043_5065722188594901797-1/-ext-10000
+Moving data to directory home/elisabetta/Scrivania/BigData
+MapReduce Jobs Launched: 
+Stage-Stage-1:  HDFS Read: 311489393 HDFS Write: 316769322 SUCCESS
+Total MapReduce CPU Time Spent: 0 msec
+OK
+Time taken: 2.452 seconds
