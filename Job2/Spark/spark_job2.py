@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, when, sum, count
 
 # Inizializzazione
 spark = SparkSession.builder.appName("UserAppreciation").getOrCreate()
@@ -7,20 +7,13 @@ spark = SparkSession.builder.appName("UserAppreciation").getOrCreate()
 # Caricamento recensioni in un DataFrame
 reviews_df = spark.read.csv("/home/elisabetta/Scrivania/BigData/Reviews.csv", header=True)
 
-# Filtraggio delle colonne necessarie per il calcolo dell'apprezzamento
-filtered_df = reviews_df.select("UserId", "HelpfulnessNumerator", "HelpfulnessDenominator")
+# Calcolo dell'apprezzamento per ogni utente
+utility = when(col("helpfulnessDenominator") != 0, col("helpfulnessNumerator") / col("helpfulnessDenominator")).otherwise(0)
+user_appreciation_df = reviews_df.groupBy("userId") \
+    .agg((sum(utility) / count("*")).alias("appreciation"))
 
-# Calcolo dell'utilità per ogni recensione
-utility_df = filtered_df.withColumn("Utility", col("HelpfulnessNumerator") / col("HelpfulnessDenominator"))
+# Ordinamento della lista di utenti in base all'apprezzamento
+sorted_users = user_appreciation_df.orderBy("appreciation", ascending=False)
 
-# Calcolo della media dell'utilità per ogni utente
-user_appreciation_df = utility_df.groupBy("userId").avg("Utility").withColumnRenamed("avg(Utility)", "Appreciation")
-
-# Ordinamento degli utenti in base all'apprezzamento
-sorted_users_df = user_appreciation_df.orderBy(col("Appreciation").desc())
-
-# Visualizzazione risultati
-sorted_users_df.show()
-
-# Salvataggio
-sorted_users_df.write.txt("Job2/Spark/output_job2_spark", header=True)
+# Salvataggio dei risultati in un file di testo
+sorted_users.write.text("p/home/elisabetta/Scrivania/BigData/output_job2_spark.txt")
