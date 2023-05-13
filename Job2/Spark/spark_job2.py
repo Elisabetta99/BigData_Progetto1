@@ -1,19 +1,57 @@
+#!/usr/bin/env python3
+"""spark application"""
+import argparse
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, when, sum, count
+from pyspark.sql.functions import when
+import time
+
+# Creazione del parser
+parser = argparse.ArgumentParser()
+parser.add_argument("--input_path", type=str, help="Input file path")
+parser.add_argument("--output_path", type=str, help="Output folder path")
+
+# Parsing degli argomenti
+args = parser.parse_args()
+input_filepath, output_filepath = args.input_path, args.output_path
 
 # Inizializzazione
 spark = SparkSession.builder.appName("UserAppreciation").getOrCreate()
 
-# Caricamento recensioni in un DataFrame
-reviews_df = spark.read.csv("/home/elisabetta/Scrivania/BigData/Reviews.csv", header=True)
+# Lettura del file di input e ottenimento di un RDD
+rdd = spark.sparkContext.textFile(input_filepath)
+
+# Rimozione dell'intestazione e filtraggio delle righe
+header = rdd.first()
+removedHeaderRDD = rdd.filter(lambda row: row != header)
+filteredRDD = removedHeaderRDD.filter(lambda line: len(line.strip().split("\t")) >= 6)
 
 # Calcolo dell'apprezzamento per ogni utente
-utility = when(col("helpfulnessDenominator") != 0, col("helpfulnessNumerator") / col("helpfulnessDenominator")).otherwise(0)
-user_appreciation_df = reviews_df.groupBy("userId") \
-    .agg((sum(utility) / count("*")).alias("appreciation"))
+utilityRDD = filteredRDD.map(lambda line: (line.strip().split("\t")[2], float(line.strip().split("\t")[4]) / float(line.strip().split("\t")[5]) if float(line.strip().split("\t")[5]) != 0 else 0))
 
-# Ordinamento della lista di utenti in base all'apprezzamento
-sorted_users = user_appreciation_df.orderBy("appreciation", ascending=False)
 
-# Salvataggio dei risultati in un file di testo
-sorted_users.write.text("p/home/elisabetta/Scrivania/BigData/output_job2_spark.txt")
+# Calcola la somma dei rapporti e il conteggio delle recensioni per ogni utente
+userSumCountRDD = utilityRDD.aggregateByKey((0, 0),
+                                            lambda acc, val: (acc[0] + val, acc[1] + 1),
+                                            lambda acc1, acc2: (acc1[0] + acc2[0], acc1[1] + acc2[1]))
+
+# Calcola la media dell'apprezzamento per ogni utente
+userAppreciationRDD = userSumCountRDD.mapValues(lambda acc: acc[0] / acc[1])
+
+# Ordina la lista di utenti in base all'apprezzamento
+sortedUsersRDD = userAppreciationRDD.sortBy(lambda x: x[1], ascending=False)
+
+
+# Misurazione del tempo di esecuzione e stampa dei risultati
+start_time = time.time()
+sortedUsersRDD.collect()
+end_time = time.time()
+print("Total execution time: {} seconds".format(end_time - start_time))
+print("End")
+
+# Stampa dei risultati nel terminale
+sorted_users = sortedUsersRDD.collect()
+for user in sorted_users:
+    print(user)
+
+# Salvataggio dei risultati in un file di output
+sortedUsersRDD.saveAsTextFile(output_filepath)
