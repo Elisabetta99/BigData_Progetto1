@@ -1,59 +1,43 @@
 #!/usr/bin/env python3
 """spark application"""
+
 import argparse
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import when
-import time
 
-# Creazione del parser
+# Creazione parser
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_path", type=str, help="Input file path")
-parser.add_argument("--output_path", type=str, help="Output folder path")
+parser.add_argument("--output_path", type=str, help="Output file path")
 
-# Parsing degli argomenti
+# Argomenti parser
 args = parser.parse_args()
 input_filepath, output_filepath = args.input_path, args.output_path
 
-# Inizializzazione
-spark = SparkSession.builder.appName("UserAppreciation").getOrCreate()
+# Inizializzazione SparkSession
+spark = SparkSession.builder.appName("User Appreciation").getOrCreate()
 
-# Lettura del file di input e ottenimento di un RDD
+# Lettura file di input + RDD con un record per ciascuna linea
 rdd = spark.sparkContext.textFile(input_filepath)
-
-# Rimozione dell'intestazione e filtraggio delle righe
 header = rdd.first()
-removedHeaderRDD = rdd.filter(lambda row: row != header)
-filteredRDD = removedHeaderRDD.filter(lambda line: len(line.strip().split("\t")) >= 6)
+removeHeaderRDD = rdd.filter(lambda row: row != header)
 
-# Calcolo dell'apprezzamento per ogni utente
-utilityRDD = filteredRDD.map(lambda line: (line.strip().split("\t")[2], float(line.strip().split("\t")[4]) / float(line.strip().split("\t")[5]) if float(line.strip().split("\t")[5]) != 0 else 0))
+# RDD (user, (HelpfulnessNumerator, HelpfulnessDenominator))
+user_helpfulness_RDD = removeHeaderRDD.map(lambda line: line.strip().split("\t")) \
+    .map(lambda user_helpfulness: (user_helpfulness[0], (int(user_helpfulness[1]), int(user_helpfulness[2]))))
 
+# RDD (user, (utility, num_reviews))
+user_utility_reviews_RDD = user_helpfulness_RDD.mapValues(lambda x: (x[0] / x[1] if x[1] != 0 else 0, 1))
 
-# Calcola la somma dei rapporti e il conteggio delle recensioni per ogni utente
-userSumCountRDD = utilityRDD.aggregateByKey((0, 0),
-                                            lambda acc, val: (acc[0] + val, acc[1] + 1),
-                                            lambda acc1, acc2: (acc1[0] + acc2[0], acc1[1] + acc2[1]))
+# RDD (user, (total_utility, total_reviews))
+user_total_utility_reviews_RDD = user_utility_reviews_RDD.reduceByKey(lambda x, y: (x[0] + y[0], x[1] + y[1]))
 
-# Calcola la media dell'apprezzamento per ogni utente
-userAppreciationRDD = userSumCountRDD.mapValues(lambda acc: acc[0] / acc[1])
+# RDD (user, appreciation)
+user_appreciation_RDD = user_total_utility_reviews_RDD.mapValues(lambda x: x[0] / x[1])
 
-# Ordina la lista di utenti in base all'apprezzamento
-sortedUsersRDD = userAppreciationRDD.sortBy(lambda x: x[1], ascending=False)
+# RDD (user, appreciation) sorted by appreciation
+sorted_user_appreciation_RDD = user_appreciation_RDD.sortBy(lambda x: x[1], ascending=False)
 
+sorted_user_appreciation_RDD.saveAsTextFile(output_filepath)
 
-# Misurazione del tempo di esecuzione e stampa dei risultati
-start_time = time.time()
-
-# Stampa dei risultati nel terminale
-sorted_users = sortedUsersRDD.collect()
-for user in sorted_users:
-    print(user)
-
-# Calcola il tempo di esecuzione
-end_time = time.time()
-print("Total execution time: {} seconds".format(end_time - start_time))
-print("End")
-
-# Salvataggio dei risultati in un file di output
-sortedUsersRDD.saveAsTextFile(output_filepath)
-
+# stop the SparkSession
+spark.stop()
