@@ -23,29 +23,32 @@ affinityGroups = []
 
 # Trova gli utenti con 3 prodotti in comune
 for i, user1 in enumerate(filteredUsers):
+    group = {user1}
+    commonProducts = userProducts[user1]
+
     for user2 in filteredUsers[i + 1:]:
-        commonProducts = userProducts[user1].intersection(userProducts[user2])
-        if len(commonProducts) >= 3:
-            affinityGroups.append((user1, user2, commonProducts))
+        if len(commonProducts.intersection(userProducts[user2])) >= 3:
+            group.add(user2)
+            commonProducts = commonProducts.intersection(userProducts[user2])
+
+    if len(group) > 1:
+        affinityGroups.append((sorted(list(group)), commonProducts))
 
 # Ordina gli affinity group in base all'UserId del primo elemento del gruppo
-sortedGroups = sorted(affinityGroups, key=lambda x: x[0])
+sortedGroups = sorted(affinityGroups, key=lambda x: x[0][0])
 
 # Rimuovi i duplicati dai gruppi
 uniqueGroups = []
 processedUsers = set()
 
-for group in sortedGroups:
-    user1, user2, commonProducts = group
-    if user1 not in processedUsers and user2 not in processedUsers:
-        uniqueGroups.append(group)
-        processedUsers.add(user1)
-        processedUsers.add(user2)
+for group, commonProducts in sortedGroups:
+    if not any(user in processedUsers for user in group):
+        uniqueGroups.append((group, commonProducts))
+        processedUsers.update(group)
 
 # Stampa il risultato
-for group in uniqueGroups:
-    user1, user2, commonProducts = group
-    print("Group: %s, %s" % (user1, user2))
+for group, commonProducts in uniqueGroups:
+    print("Group: %s" % ", ".join(group))
     print("Common Products:")
     for product in commonProducts:
         print(product)
