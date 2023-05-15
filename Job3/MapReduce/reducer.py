@@ -2,47 +2,51 @@
 """reducer.py"""
 
 import sys
-from itertools import combinations, groupby
+from collections import defaultdict
 
-userProducts = {}
+# Dizionario per memorizzare i prodotti recensiti da ogni utente
+userProducts = defaultdict(set)
+
+# Leggi i dati di input dal mapper
+for line in sys.stdin:
+    # Analizza la riga in userId e productId
+    userId, productId = line.strip().split("\t")
+
+    # Aggiungi il productId all'utente corrispondente
+    userProducts[userId].add(productId)
+
+# Filtra gli utenti che hanno recensito almeno 3 prodotti
+filteredUsers = [userId for userId, products in userProducts.items() if len(products) >= 3]
+
+# Dizionario per memorizzare gli utenti con gusti affini
 affinityGroups = []
+
+# Trova gli utenti con 3 prodotti in comune
+for i, user1 in enumerate(filteredUsers):
+    for user2 in filteredUsers[i + 1:]:
+        commonProducts = userProducts[user1].intersection(userProducts[user2])
+        if len(commonProducts) >= 3:
+            affinityGroups.append((user1, user2, commonProducts))
+
+# Ordina gli affinity group in base all'UserId del primo elemento del gruppo
+sortedGroups = sorted(affinityGroups, key=lambda x: x[0])
+
+# Rimuovi i duplicati dai gruppi
+uniqueGroups = []
 processedUsers = set()
 
-for line in sys.stdin:
-    productId, userId = line.split("\t")
+for group in sortedGroups:
+    user1, user2, commonProducts = group
+    if user1 not in processedUsers and user2 not in processedUsers:
+        uniqueGroups.append(group)
+        processedUsers.add(user1)
+        processedUsers.add(user2)
 
-    try:
-        if userId not in userProducts:
-            userProducts[userId] = set()
-        userProducts[userId].add(productId)
-
-    except ValueError:
-        pass
-
-for user1 in userProducts:
-    if user1 in processedUsers:
-        continue
-
-    group = {user1}
-    commonProducts = userProducts[user1]
-
-    for user2 in userProducts:
-        if user1 != user2 and user2 not in processedUsers:
-            if len(commonProducts.intersection(userProducts[user2])) >= 3:
-                group.add(user2)
-                commonProducts = commonProducts.intersection(userProducts[user2])
-                processedUsers.add(user2)
-
-    if len(group) > 1:
-        affinityGroups.append((sorted(list(group)), commonProducts))
-        processedUsers.update(group)
-
-sortedGroups = sorted(affinityGroups, key=lambda x: x[0][0])
-
-for group, commonProducts in sortedGroups:
-    print("Group: %s" % ", ".join(group))
+# Stampa il risultato
+for group in uniqueGroups:
+    user1, user2, commonProducts = group
+    print("Group: %s, %s" % (user1, user2))
     print("Common Products:")
-
     for product in commonProducts:
         print(product)
     print()

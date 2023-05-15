@@ -13,7 +13,7 @@ for line in sys.stdin:
         score = int(columns[6])
 
         if score >= 4:
-            print("%s \t%s" % (productId, userId))
+            print("%s \t%s" % (userId, productId))
 
     except ValueError:
         pass
