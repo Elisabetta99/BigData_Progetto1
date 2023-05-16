@@ -1,53 +1,82 @@
 #!/usr/bin/env python3
-"""spark application"""
 
+"""spark application"""
 import argparse
 from pyspark.sql import SparkSession
-import time
 
-# Creazione parser
+
+# create parser and set its arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_path", type=str, help="Input file path")
-parser.add_argument("--output_path", type=str, help="Output file path")
+parser.add_argument("--output_path", type=str, help="Output folder path")
 
-# Argomenti parser
+# parse arguments
 args = parser.parse_args()
 input_filepath, output_filepath = args.input_path, args.output_path
 
-# Inizializzazione SparkSession
+# initialize SparkSession with the proper configuration
 spark = SparkSession.builder.appName("Affinity Group").getOrCreate()
 
-# Avvia il timer
-start_time = time.time()
 
-# Lettura file di input + RDD con un record per ciascuna linea
+def filter_products_with_score(record):
+    """Filter products with score >= 4"""
+    score = int(record[2])
+    return score >= 4
+
+
+def get_user_products(record):
+    """Map to (userId, productId)"""
+    userId = record[1]
+    productId = record[0]
+    return (userId, productId)
+
+
+def filter_users_with_common_products(records):
+    """Filter users with at least 3 common products"""
+    users = set(records)
+    common_users = []
+
+    for user in users:
+        common_products = users.intersection(user[1])
+        if len(common_products) >= 3:
+            common_users.append((user[0], sorted(list(common_products))))
+
+    return common_users
+
+
+# read the input file and obtain an RDD with a record for each line
 rdd = spark.sparkContext.textFile(input_filepath)
+
+# remove csv header
 header = rdd.first()
-removeHeaderRDD = rdd.filter(lambda row: row != header)
+rdd = rdd.filter(lambda line: line != header)
 
-# Mapper: Filtra prodotti con score >= 4
-filtered_data = removeHeaderRDD.map(lambda line: line.split('\t')) \
-                    .filter(lambda columns: int(columns[6]) >= 4) \
-                    .map(lambda columns: (columns[2], columns[1]))
+# split lines and filter products with score >= 4
+filtered_rdd = rdd.map(lambda line: line.split("\t")).filter(filter_products_with_score)
 
-# Reducer: Trova gli utenti con 3 prodotti in comune
-grouped_users = filtered_data.groupByKey() \
-                            .filter(lambda x: len(x[1]) >= 3) \
-                            .flatMap(lambda x: [(user1, user2) for user1 in x[1] for user2 in x[1] if user1 != user2]) \
-                            .distinct()
+# map to (userId, productId)
+user_product_rdd = filtered_rdd.map(get_user_products)
 
-# Ordina gli affinity group in base all'UserId del primo elemento del gruppo
-sorted_groups = grouped_users.map(lambda x: (x[0], x[1])).sortByKey()
+# group by userId and collect products
+grouped_rdd = user_product_rdd.groupByKey().mapValues(list)
 
-# Rimuovi i duplicati dai gruppi
-unique_groups = sorted_groups.map(lambda x: (x[0], x[1])).distinct()
+# filter users with at least 3 common products
+filtered_users_rdd = grouped_rdd.filter(lambda x: len(x[1]) >= 3).map(lambda x: (x[0], set(x[1])))
 
-# Stampa il risultato
-unique_groups.foreach(lambda x: print(x[0], x[1]))
+# find users with common products
+common_users_rdd = filtered_users_rdd.cartesian(filtered_users_rdd) \
+    .filter(lambda x: x[0][0] < x[1][0]) \
+    .map(lambda x: ((x[0][0], x[1][0]), x[0][1].intersection(x[1][1]))) \
+    .filter(lambda x: len(x[1]) >= 3)
 
-# Chiudi la sessione di Spark
-spark.stop()
+# collect all groups of users with common products
+grouped_users_rdd = common_users_rdd.groupByKey().mapValues(list)
 
-# Calcola il tempo di esecuzione
-execution_time = time.time() - start_time
-print("Tempo di esecuzione:", execution_time)
+# sort by the UserId of the first element and remove duplicates
+sorted_unique_rdd = grouped_users_rdd \
+    .map(lambda x: (sorted(x[1]), x[0])) \
+    .sortByKey() \
+    .map(lambda x: (x[1], x[0]))
+
+# save the result
+sorted_unique_rdd.saveAsTextFile(output_filepath)
