@@ -16,7 +16,7 @@ COMMENT 'User Reviews Table'
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ',';
 
-LOAD DATA LOCAL INPATH '/home/elisabetta/Scrivania/BigData/Reviews.csv' overwrite INTO TABLE user_reviews;
+LOAD DATA LOCAL INPATH '/home/elisabetta/BigDataCluster/dataset/Reviews.csv' overwrite INTO TABLE user_reviews;
 
 CREATE TABLE user_appreciation AS
 SELECT
@@ -28,9 +28,9 @@ GROUP BY UserId;
 CREATE TABLE sorted_users AS
 SELECT UserId, appreciation
 FROM user_appreciation
-ORDER BY appreciation DESC;
+ORDER BY appreciation DESC, UserId DESC;
 
-INSERT OVERWRITE DIRECTORY 'home/elisabetta/Scrivania/BigData'
+INSERT OVERWRITE DIRECTORY 'file:///home/elisabetta/Scrivania/BigData/output_hive2'
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ','
 
