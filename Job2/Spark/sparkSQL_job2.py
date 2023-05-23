@@ -30,7 +30,7 @@ user_appreciation_df = reviews_df.groupBy("UserId") \
     .agg((sum(utility) / count("*")).alias("Appreciation"))
 
 # Ordinamento della lista di utenti in base all'apprezzamento
-sorted_users = user_appreciation_df.orderBy("Appreciation", ascending=False)
+sorted_users = user_appreciation_df.orderBy(["Appreciation", "UserId"], ascending=[False, False])
 
 # Visualizzazione dei risultati
 sorted_users.show()

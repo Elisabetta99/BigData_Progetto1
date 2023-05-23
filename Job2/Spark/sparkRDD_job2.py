@@ -39,7 +39,7 @@ user_total_utility_reviews_RDD = user_utility_reviews_RDD.reduceByKey(lambda x, 
 user_appreciation_RDD = user_total_utility_reviews_RDD.mapValues(lambda x: x[0] / x[1])
 
 # RDD (user, appreciation) sorted by appreciation
-sorted_user_appreciation_RDD = user_appreciation_RDD.sortBy(lambda x: x[1], ascending=False)
+sorted_user_appreciation_RDD = user_appreciation_RDD.sortBy(lambda x: (x[1], x[0]), ascending=False)
 
 sorted_user_appreciation_RDD.saveAsTextFile(output_filepath)
 
