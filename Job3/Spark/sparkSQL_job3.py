@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""spark application"""
+"""affinityGroupsSQL.py"""
 
 import argparse
 import time
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, collect_set, size, concat_ws
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+from pyspark.sql.functions import col, collect_set, size, explode, array, concat_ws
 
 # Creazione parser
 parser = argparse.ArgumentParser()
@@ -15,66 +16,62 @@ parser.add_argument("--output_path", type=str, help="Output file path")
 args = parser.parse_args()
 input_filepath, output_filepath = args.input_path, args.output_path
 
-# Creazione della sessione Spark
-spark = SparkSession.builder.appName("Affinity Group").getOrCreate()
+# Inizializzazione della sessione Spark
+spark = SparkSession.builder.appName("Group Affinity").getOrCreate()
 
 # Avvia il timer
 start_time = time.time()
 
-# Lettura del dataset
-df = spark.read.csv(input_filepath, header=True)
+# Definizione schema
+schema = StructType([
+    StructField("Id", IntegerType(), True),
+    StructField("ProductId", StringType(), True),
+    StructField("UserId", StringType(), True),
+    StructField("ProfileName", StringType(), True),
+    StructField("HelpfulnessNumerator", IntegerType(), True),
+    StructField("HelpfulnessDenominator", IntegerType(), True),
+    StructField("Score", StringType(), True),
+    StructField("Time", StringType(), True),
+    StructField("Summary", StringType(), True),
+    StructField("Text", StringType(), True)
+])
 
-# Filtraggio dei prodotti con score >= 4
-filtered_df = df.filter(col("Score") >= 4)
-print("Fine filtraggio dei prodotti con score >= 4")
+# Lettura file di input
+reviews_df = spark.read.option("quote", "\"").csv(input_filepath, header=False, schema=schema).cache()
 
-# Raggruppamento dei prodotti per utente e collezione dei prodotti recensiti
-user_products_df = filtered_df.groupBy("UserId").agg(collect_set("ProductId").alias("products"))
+# Filtraggio recensioni con Score >=4
+filtered_df = reviews_df.select("UserId", "ProductId", "Score").filter(reviews_df["Score"] >= 4)
 
-# Filtraggio degli utenti con almeno 3 prodotti
-filtered_users_df = user_products_df.filter(size(col("products")) >= 3)
-print("Fine filtraggio degli utenti con almeno 3 prodotti")
+# Coppie di utenti che hanno recensito lo stesso prodotto
+joined_df = reviews_df.alias("df1").join(reviews_df.alias("df2"), ["ProductId"]) \
+    .where(col("df1.userId") < col("df2.userId")) \
+    .select(col("df1.userId").alias("userId1"), col("df2.userId").alias("userId2"),
+            col("df1.productId").alias("productId")) \
+    .distinct()
 
-# Creazione di una vista temporanea per eseguire query SQL
-filtered_users_df.createOrReplaceTempView("filtered_users")
+# Coppie di utenti che hanno almeno 3 prodotti in comune
+couple_users_products = joined_df.groupBy("userId1", "userId2").agg(collect_set("productId").alias("CommonProducts")) \
+    .where(size(col("CommonProducts")) >= 3) \
+    .select("userId1", "userId2", "CommonProducts")
 
-# Trovare utenti con almeno 3 prodotti in comune
-similar_users_df = spark.sql("""
-    SELECT up1.userid, up2.userid AS similar_userid, array_intersect(up1.products, up2.products) AS common_products
-    FROM filtered_users up1
-    JOIN filtered_users up2 ON up1.userid < up2.userid
-    WHERE size(array_intersect(up1.products, up2.products)) >= 3
-""")
-print("Trovati utenti con almeno 3 prodotti in comune")
+# Raggruppamento utenti con prodotti in comune
+group_affinity = couple_users_products.withColumn(
+    "CommonProducts",
+    concat_ws(",", col("CommonProducts"))
+).withColumn(
+    "UserId",
+    explode(array("userId1", "userId2"))
+).groupBy("CommonProducts").agg(collect_set("userId").alias("Group"))
 
-# Generazione dei gruppi di utenti con gusti affini
-groups_df = similar_users_df.groupBy("common_products").agg(collect_set("UserId").alias("users"))
-print("Generati gruppi di utenti")
+# Converti l'array di stringhe "Group" in una stringa separata da virgole
+group_affinity = group_affinity.withColumn("Group", concat_ws(",", col("Group")))
 
-# Convertire la colonna common_products in una stringa
-groups_df = groups_df.withColumn("common_products_str", concat_ws(",", col("common_products")))
+# Visualizzazione dei risultati
+group_affinity.show()
 
-# Convertire la colonna users in una stringa
-groups_df = groups_df.withColumn("users_str", concat_ws(",", col("users")))
-
-# Rimozione dei duplicati all'interno di ciascun gruppo
-distinct_groups_df = groups_df.dropDuplicates()
-print("Fine rimozione dei duplicati")
-
-# Ordinamento del risultato in base al primo userid nel gruppo
-sorted_groups_df = distinct_groups_df.orderBy(col("users").getItem(1))
-print("Fine ordinamento risultato")
-
-print("Inizio salvataggio risultati")
-
-# Salvataggio dei risultati in un file di output nel formato CSV
-sorted_groups_df.select("common_products_str", "users").write.csv(output_filepath)
-
-print("Fine salvataggio risultati")
+# Salvataggio dei risultati
+group_affinity.write.csv(output_filepath, mode="overwrite")
 
 # Calcola il tempo di esecuzione
 execution_time = time.time() - start_time
 print("Tempo di esecuzione: %.2f secondi" % execution_time)
-
-# Termina la sessione Spark
-spark.stop()
