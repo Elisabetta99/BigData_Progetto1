@@ -7,7 +7,7 @@ from datetime import datetime
 import re
 from functools import reduce
 from pyspark.sql import SparkSession
-
+import time
 
 # create parser and set its arguments
 parser = argparse.ArgumentParser()
@@ -23,6 +23,10 @@ spark = SparkSession \
     .builder \
     .appName("sparkjob1") \
     .getOrCreate()
+
+
+
+startTime = time.time()
 
 # read the input file into an RDD with a record for each line
 lines_RDD = spark.sparkContext.textFile(input_filepath)
@@ -80,7 +84,9 @@ final_out = word_count.groupByKey().mapValues(lambda x: sorted(x, key=lambda y: 
 joinRDD = selected_year_product_RDD.map(lambda x: ((x[0],x[1]), 1)).join(final_out.map(lambda x: ((x[0][0],x[0][1]),x[1])))
 final_job = joinRDD.map(lambda x: ((x[0][0], x[0][1]), x[1][1]))
 
+endTime = time.time()
 
-final_job.saveAsTextFile(output_filepath)
+#final_job.saveAsTextFile(output_filepath)
 
+print("Time : ", endTime - startTime)
 

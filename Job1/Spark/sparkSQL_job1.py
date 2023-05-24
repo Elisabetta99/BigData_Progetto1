@@ -74,7 +74,7 @@ outputJob = top10prod.join(topWords, ["year", "productId"]).cache()
 
 endTime = time.time()
 
-outputJob.write.csv(output_filepath, mode = "overwrite")
+#outputJob.write.csv(output_filepath, mode = "overwrite")
 #visualizzo il tempo impiegato 
 print("Time : ", endTime - startTime)
 

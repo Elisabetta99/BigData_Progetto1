@@ -7,7 +7,7 @@ DROP TABLE mergedTable;
 
 CREATE TABLE documents(Id INT, ProductId STRING, UserId STRING, ProfileName STRING, HelpfullnessNumerator INT, HelpfullnessDenominator INT, Score INT, time BIGINT, Summary STRING, text STRING) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',';
 
-LOAD DATA LOCAL INPATH '/home/fabio/ProgettoBigData/Reviews.csv' OVERWRITE INTO TABLE documents;
+LOAD DATA LOCAL INPATH '/home/elisabetta/BigDataCluster/Reviews.csv' OVERWRITE INTO TABLE documents;
 
 CREATE TABLE info AS
 SELECT ProductId, YEAR(from_unixtime(CAST(time AS BIGINT))) AS time, text
@@ -59,7 +59,7 @@ JOIN (
     GROUP BY time, productId
 ) tt ON tt.time = tf.time AND tt.productId = tf.productId;
 
-SELECT * FROM mergedTable;
+
 
 DROP TABLE documents;
 DROP TABLE info; 

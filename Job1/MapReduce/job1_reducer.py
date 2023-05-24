@@ -43,11 +43,7 @@ for line in sys.stdin:
     if time not in reviews_year:
         reviews_year[time] = {}
 
-    #conto il numero delle recensioni per quel prodotto in base all anno
-    #if productId not in reviews_year[time].keys():
-     #   reviews_year[time][productId] = 0
-    
-    #reviews_year[time][productId] += val
+
 
     if productId not in reviews_year[time]:
     	reviews_year[time][productId] = {}
@@ -66,9 +62,6 @@ for time in sorted(reviews_year, reverse=True):
 
 		for parole in sorted(dictWords.items(), key = lambda x: x[1], reverse = True)[:5]:
 			print('\t%s\t%i' % (parole[0], parole[1] ))
-#for time in reviews_year:
-#	for productId in reviews_year[time].keys():
-#		print("%s\t%s\t%s\t%i" % (productId, time, reviews_year[time][productId][1], reviews_year[time][productId][0]))
-		#print("%s\t%s\t%s\t%i" % (productId, time, text, reviews_year[time][productId]))
+
 
 
